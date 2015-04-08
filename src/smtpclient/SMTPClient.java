@@ -8,16 +8,28 @@ import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import smtpclient.commandes.DataCmd;
+import smtpclient.commandes.HeloCmd;
+import smtpclient.commandes.MailFromCmd;
+import smtpclient.commandes.QuitCmd;
+import smtpclient.commandes.RcptToCmd;
 import smtpclient.exceptions.NoDestException;
+import smtpclient.responses.Response;
 
 public class SMTPClient {
     private final int mPortServ;
     private final String mAdrServ;
-    
+    private final Message mMess;
     private List<String> mListDest;
         
     public SMTPClient(Message m, int port, String domain) throws NoDestException {
+        mMess = m;
+        mListDest = new ArrayList<>();
+        
         //Verification destinataire pour ce domaine 
         for(String dest : m.getTo())
             if (dest.endsWith("@"+domain))
@@ -30,7 +42,7 @@ public class SMTPClient {
         mAdrServ = domain;
     }
     
-    public void deposer() throws UnknownHostException, IOException
+    public void deposer() throws UnknownHostException, IOException, Exception
     {
         InetAddress iServ = InetAddress.getByName(mAdrServ);
 
@@ -43,25 +55,82 @@ public class SMTPClient {
 
         System.out.println("Buffer ok");
         
-        //REP 220 
-        //HELO domain    
+        Response rep = new Response(input.readLine());
         
-        //REP 250
-        //MAIL FROM <@adrMailClient>
+        if (rep.getCode() == 220)
+        { //REP 220 
+            try {
+                //HELO domain    
+                HeloCmd helo = new HeloCmd("mv.com");
+                helo.send(output);
+                
+                if (helo.traitementRep(input)) 
+                { //REP 250
+                    //MAIL FROM <@adrMailClient>
+                    MailFromCmd mf = new MailFromCmd(mMess.getFrom());
+                    mf.send(output);
+                    
+                    //REP 250
+                    if (mf.traitementRep(input))
+                    {
+                        String destError = "";
+                        int nbDestNotFound = 0;
+                        RcptToCmd rcpt;
+                        for(String mail : mListDest)
+                        {
+                            rcpt = new RcptToCmd(mail);
+                            rcpt.send(output);
+                            
+                            if(!rcpt.traitementRep(input))
+                            {
+                                nbDestNotFound++;
+                                destError += "Utilisateur incorrect : "+mail+"\r\n";
+                            }
+                        }
+                        
+                        if (nbDestNotFound < mListDest.size())
+                        {
+                            DataCmd datacmd = new DataCmd();
+                            datacmd.send(output);
+                                    
+                            if (datacmd.traitementRep(input))
+                            {
+                                mMess.send(output);
+                                
+                                Response r = new Response(input.readLine());
+                                if (r.getCode() == 250)
+                                {
+                                    System.out.println("Mess deposé");
+                                } else {
+                                    System.out.println("Err mess");
+                                }                                
+                            } else {
+                                throw new Exception("Erreur: Réponse invalide du serveur pour la commande DATA");
+                            }
+                        } else {
+                            throw new Exception("Erreur: Aucun destinaire n'a été trouvé sur le serveur.");
+                        }                       
+                    } else {
+                        throw new Exception("Erreur: Mail from incorrect");
+                    }
+                    
+                }
+            } catch (Exception ex) {
+                QuitCmd quit = new QuitCmd();
+
+                quit.send(output);
+                quit.traitementRep(input);
+
+                throw ex; //propagé l'exception
+            }
         
-        //REP 250
+        } else {
+            throw new Exception("Erreur: Serveur occupé");
+        }
         
-        //Boucle RECPT TO <@destMail>
-        //Si REP 250 ok sinon 550 mettre dans tableau user not found
-        
-        //DATA
-        //REP 354            
-        
-        //REP 250
-        //QUIT
-        
-        //REP 221
-        //close()
+        input.close();
+        output.close();
+        sock.close(); //STATE deconnecté
     }
     
     
@@ -71,5 +140,17 @@ public class SMTPClient {
      */
     public static void main(String[] args) {
         System.out.println("Elodie Elodie Elodie Mourier");
+        
+        Message m = new Message();
+        m.setContent("Hello, how are you today ?");
+        m.setFrom("buckbunny@carotte.com");
+        m.addTo("adrien.castex@134.214.117.61");
+        
+        try {
+            SMTPClient client = new SMTPClient(m, 1024, "134.214.117.61");
+            client.deposer();
+        } catch (Exception ex) {
+            Logger.getLogger(SMTPClient.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 }

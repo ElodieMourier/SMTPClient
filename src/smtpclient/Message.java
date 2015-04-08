@@ -1,6 +1,9 @@
 package smtpclient;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.GregorianCalendar;
 import java.util.List;
 
 public class Message {
@@ -8,27 +11,15 @@ public class Message {
     private String from;
     private List<String> to;
     private String content;
+    private GregorianCalendar dateMess;
 
     public Message() {
         subject = "";
         from = "";
         to = new ArrayList<>();
         content = "";
-    }
-
-    public Message(String subject, String from, List<String> to, String content) {
-        this.subject = subject;
-        this.from = from;
-        this.to = to;
-        this.content = content;
-    }
-    
-    public Message(String subject, String from)
-    {
-        this.subject = subject;
-        this.from = from;
-        to = new ArrayList<>();
-        this.content = "";
+        
+        dateMess = new GregorianCalendar();
     }
     
     public void addTo(String dest)
@@ -71,5 +62,29 @@ public class Message {
 
     public void setTo(List<String> to) {
         this.to = to;
+    }
+    
+    /**
+     * Envoyer la commande sur le flux de sortie en paramètre
+     *
+     * @param output : flux sortie
+     * @throws IOException
+     */
+    public void send(BufferedWriter output) throws IOException {
+        //output.write("Date: "+dateMess.+"\r\n"); //date
+        
+        //TO
+        for(String t : to)
+            output.write("To: "+t+"\r\n");
+        
+        output.write("From: "+from+"\r\n"); //FROM
+        output.write("Subject: "+subject+"\r\n"); //SUBJECT
+        
+        output.write("\r\n"); //vide
+        
+        output.write(content);
+        
+        output.write("\r\n.\r\n"); //FFIN
+        output.flush();
     }
 }
