@@ -24,25 +24,28 @@ public class SMTPClient {
     private final int mPortServ;
     private final String mAdrServ;
     private final Message mMess;
+    
     private List<String> mListDest;
+    private final String domain; 
+    private List<String> listDestError; //liste destinataire incorrect lors de l'envoi
         
-    public SMTPClient(Message m, int port, String domain) throws NoDestException {
+    public SMTPClient(Message m, int port, String domain) {
         mMess = m;
         mListDest = new ArrayList<>();
+        this.domain = domain;
         
         //Verification destinataire pour ce domaine 
         for(String dest : m.getTo())
             if (dest.endsWith("@"+domain))
                 mListDest.add(dest);
-        
-        if (mListDest.isEmpty())
-            throw new NoDestException(); //Aucun destinataire pour ce domaine
+       
+        listDestError = new ArrayList<>();
         
         mPortServ = port;
         mAdrServ = domain;
     }
     
-    public void deposer() throws UnknownHostException, IOException, Exception
+    public boolean deposer() throws UnknownHostException, IOException, Exception
     {
         InetAddress iServ = InetAddress.getByName(mAdrServ);
 
@@ -73,7 +76,7 @@ public class SMTPClient {
                     //REP 250
                     if (mf.traitementRep(input))
                     {
-                        String destError = "";
+                        listDestError.clear();
                         int nbDestNotFound = 0;
                         RcptToCmd rcpt;
                         for(String mail : mListDest)
@@ -84,7 +87,7 @@ public class SMTPClient {
                             if(!rcpt.traitementRep(input))
                             {
                                 nbDestNotFound++;
-                                destError += "Utilisateur incorrect : "+mail+"\r\n";
+                                listDestError.add(mail);
                             }
                         }
                         
@@ -100,18 +103,18 @@ public class SMTPClient {
                                 Response r = new Response(input.readLine());
                                 if (r.getCode() == 250)
                                 {
-                                    System.out.println("Mess deposé");
+                                    System.out.println("Mess deposé domain <"+domain+">");
                                 } else {
-                                    System.out.println("Err mess");
+                                    throw new Exception("Erreur domain <"+domain+"> : Réponse invalide du serveur pour la commande DATA");
                                 }                                
                             } else {
-                                throw new Exception("Erreur: Réponse invalide du serveur pour la commande DATA");
+                                throw new Exception("Erreur domain <"+domain+"> : Réponse invalide du serveur pour la commande DATA");
                             }
-                        } else {
-                            throw new Exception("Erreur: Aucun destinaire n'a été trouvé sur le serveur.");
-                        }                       
+                        }/* else {
+                            throw new Exception("Erreur domain <"+domain+"> : Aucun destinaire n'a été trouvé sur le serveur.");
+                        }  */                     
                     } else {
-                        throw new Exception("Erreur: Mail from incorrect");
+                        throw new Exception("Erreur domain <"+domain+"> : Mail from incorrect");
                     }
                     
                 }
@@ -131,9 +134,17 @@ public class SMTPClient {
         input.close();
         output.close();
         sock.close(); //STATE deconnecté
+        
+        return true;
     }
     
+    public List<String> getDestError() {
+        return listDestError;
+    }
     
+    public List<String> getListDest() {
+        return mListDest;
+    }
     
     /**
      * @param args the command line arguments

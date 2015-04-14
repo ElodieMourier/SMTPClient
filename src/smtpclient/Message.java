@@ -83,6 +83,8 @@ public class Message {
         output.write("\r\n"); //vide
         
         output.write(content);
+        if (content.endsWith("\r\n."))
+            content += "#";
         
         output.write("\r\n.\r\n"); //FFIN
         output.flush();
