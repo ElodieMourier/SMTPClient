@@ -87,7 +87,7 @@ public class FenetreMessageController implements Initializable {
                 String destIncorrect = "";
                 for (int i=0; i<tblTo.length; ++i) {
                     tblTo[i] = tblTo[i].trim();
-                    if (tblTo[i].matches("[a-zA-Z\\.0-9\\-_]+@[a-zA-Z0-9\\-]+\\.[a-zA-Z0-9]+"))
+                    if (tblTo[i].matches("[a-zA-Z\\.0-9\\-_]+@[a-zA-Z0-9\\-\\.]+"))
                     {
                         listTo.add(tblTo[i]);
                         
