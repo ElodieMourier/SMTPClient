@@ -85,7 +85,9 @@ public class Message {
         output.write(content);
         if (content.endsWith("\r\n."))
             content += "#";
-        
+        if (content.endsWith("\r\n.\r\n"))
+            content = content.substring(0, content.length()-1)+"#";
+         
         output.write("\r\n.\r\n"); //FFIN
         output.flush();
     }
