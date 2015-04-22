@@ -150,7 +150,6 @@ public class SMTPClient {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        System.out.println("Elodie Elodie Elodie Mourier");
         
         Message m = new Message();
         m.setContent("Hello, how are you today ?");

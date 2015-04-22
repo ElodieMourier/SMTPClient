@@ -15,7 +15,7 @@ public class RcptToCmd extends Commande {
     
     public void setMail(String mail)
     {
-        parameters[0] = mail;
+        parameters[0] = "<"+mail+">";
     }
 
     @Override
