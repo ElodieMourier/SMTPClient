@@ -126,7 +126,7 @@ public class FenetreMessageController implements Initializable {
                                 for (String de : smtp.getDestError())
                                     destError += "Destinaire incorrect : "+de+"\r\n";
 
-                                if(!ok) ok = true;
+                                if(!ok && smtp.getDestError().size() < smtp.getListDest().size()) ok = true;
                             } catch (Exception ex) {
                                 //JOptionPane.showMessageDialog(null, ex.getMessage());
 
